@@ -105,3 +105,38 @@ st.pyplot(fig2)
 # Classification report
 st.subheader(f"{best_model_name} - Classification Report")
 st.text(classification_report(y_test, y_pred))
+
+# === Upload new customer data for prediction ===
+st.subheader("📂 Upload New Customers for Churn Prediction")
+
+uploaded_file = st.file_uploader("Upload a CSV file", type=["csv"])
+
+if uploaded_file is not None:
+    try:
+        new_data = pd.read_csv(uploaded_file)
+        new_ids = new_data["customer_id"]
+
+        # One-hot encode and align with training data
+        new_encoded = pd.get_dummies(new_data.drop(columns=["customer_id"]), drop_first=True)
+        new_encoded = new_encoded.reindex(columns=X_train.columns, fill_value=0)
+
+        # Predict using the best model
+        new_probs = model_used.predict_proba(new_encoded)[:, 1]
+        new_preds = model_used.predict(new_encoded)
+
+        # Create output
+        output = pd.DataFrame({
+            "customer_id": new_ids,
+            "churn_probability": new_probs,
+            "predicted_churn": new_preds
+        })
+
+        st.success("✅ Prediction complete!")
+        st.dataframe(output)
+
+        # Download button
+        csv = output.to_csv(index=False).encode("utf-8")
+        st.download_button("Download Predictions", csv, "churn_predictions.csv", "text/csv")
+
+    except Exception as e:
+        st.error(f"⚠️ Something went wrong: {e}")
